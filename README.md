@@ -138,6 +138,7 @@ python xhs_agent.py
 - **发布页找不到标题框**：确认 URL 为图文流 `target=image`，并已先上传图片（脚本会按配置使用占位图或下载图）。
 
 ---
+![31e1464a542b208162da67ddb010e1cf](https://github.com/user-attachments/assets/1687ff19-2c25-4c53-9491-d9e71129c120)
 
 ## 许可证
 
