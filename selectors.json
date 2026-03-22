@@ -1,0 +1,8 @@
+{
+  "search_card": "section.note-item, div.note-item, div[data-v-note-item], .note-item",
+  "search_card_link": "a",
+  "publish_title": "input[placeholder*='标题'], textarea.d-text[placeholder='输入标题']",
+  "publish_content": "div.tiptap.ProseMirror[contenteditable='true']",
+  "publish_upload": "input[type='file']",
+  "publish_tag": "input[placeholder*='标签'], input[placeholder*='话题'], input[placeholder*='添加话题']"
+}
