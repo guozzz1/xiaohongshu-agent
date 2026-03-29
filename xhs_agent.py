@@ -18,6 +18,215 @@ from dotenv import load_dotenv
 from playwright.async_api import BrowserContext, Page, async_playwright
 
 
+class LLMClient:
+    """大模型API客户端，支持多种AI模型进行智能二创"""
+    
+    def __init__(self):
+        self.api_type = os.getenv("LLM_API_TYPE", "openai").lower()
+        self.api_key = os.getenv("LLM_API_KEY", "")
+        self.api_base_url = os.getenv("LLM_API_BASE_URL", "https://api.openai.com/v1")
+        self.model = os.getenv("LLM_MODEL", "gpt-3.5-turbo")
+        self.temperature = float(os.getenv("LLM_TEMPERATURE", "0.7"))
+        self.max_tokens = int(os.getenv("LLM_MAX_TOKENS", "1000"))
+        
+        if not self.api_key:
+            raise RuntimeError("未配置 LLM_API_KEY，无法使用大模型二创功能")
+    
+    def _get_headers(self):
+        """获取API请求头"""
+        if self.api_type == "azure":
+            return {"api-key": self.api_key, "Content-Type": "application/json"}
+        else:
+            return {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+    
+    def _build_prompt(self, note: Note) -> str:
+        """构建二创提示词"""
+        return f"""你是一个专业的新媒体内容创作者，擅长分析和改写招聘类笔记。
+
+原始笔记信息：
+标题：{note.title}
+内容：{note.content}
+标签：{note.original_tags}
+点赞数：{note.likes}
+评论数：{note.comments}
+收藏数：{note.favorites}
+
+请根据原始笔记的内容和风格，进行智能二创：
+1. 分析原始笔记的核心卖点和风格特点
+2. 生成一个全新的标题（20字以内）
+3. 生成全新的正文内容（保持相似风格但内容不同）
+4. 生成相关的标签（不超过10个）
+
+要求：
+- 保持原始笔记的招聘主题和风格
+- 内容要有吸引力和转化率
+- 符合小红书平台的调性
+- 标题要抓眼球，正文要有层次感
+
+请按以下JSON格式返回：
+{{
+    "title": "新标题",
+    "content": "新正文内容",
+    "tags": "#标签1 #标签2 #标签3",
+    "analysis": "内容分析",
+    "direction": "二创方向建议"
+}}"""
+    
+    def generate_rewrite(self, note: Note) -> Dict[str, str]:
+        """调用大模型API生成二创内容"""
+        prompt = self._build_prompt(note)
+        
+        if self.api_type == "openai":
+            return self._call_openai(prompt)
+        elif self.api_type == "azure":
+            return self._call_azure(prompt)
+        elif self.api_type == "qwen":
+            return self._call_qwen(prompt)
+        elif self.api_type == "deepseek":
+            return self._call_deepseek(prompt)
+        elif self.api_type == "moonshot":
+            return self._call_moonshot(prompt)
+        else:
+            raise RuntimeError(f"不支持的API类型: {self.api_type}")
+    
+    def _call_openai(self, prompt: str) -> Dict[str, str]:
+        """调用OpenAI API"""
+        url = f"{self.api_base_url}/chat/completions"
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "你是一个专业的新媒体内容创作者"},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens
+        }
+        
+        response = requests.post(url, headers=self._get_headers(), json=data, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+        
+        content = result["choices"][0]["message"]["content"]
+        return self._parse_response(content)
+    
+    def _call_azure(self, prompt: str) -> Dict[str, str]:
+        """调用Azure OpenAI API"""
+        url = f"{self.api_base_url}/chat/completions?api-version=2023-05-15"
+        data = {
+            "messages": [
+                {"role": "system", "content": "你是一个专业的新媒体内容创作者"},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens
+        }
+        
+        response = requests.post(url, headers=self._get_headers(), json=data, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+        
+        content = result["choices"][0]["message"]["content"]
+        return self._parse_response(content)
+    
+    def _call_qwen(self, prompt: str) -> Dict[str, str]:
+        """调用通义千问API"""
+        url = f"{self.api_base_url}/v1/chat/completions"
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "你是一个专业的新媒体内容创作者"},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens
+        }
+        
+        response = requests.post(url, headers=self._get_headers(), json=data, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+        
+        content = result["output"]["text"]
+        return self._parse_response(content)
+    
+    def _call_deepseek(self, prompt: str) -> Dict[str, str]:
+        """调用DeepSeek API"""
+        url = f"{self.api_base_url}/chat/completions"
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "你是一个专业的新媒体内容创作者"},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens
+        }
+        
+        response = requests.post(url, headers=self._get_headers(), json=data, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+        
+        content = result["choices"][0]["message"]["content"]
+        return self._parse_response(content)
+    
+    def _call_moonshot(self, prompt: str) -> Dict[str, str]:
+        """调用Moonshot AI API"""
+        url = f"{self.api_base_url}/chat/completions"
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "你是一个专业的新媒体内容创作者"},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens
+        }
+        
+        response = requests.post(url, headers=self._get_headers(), json=data, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+        
+        content = result["choices"][0]["message"]["content"]
+        return self._parse_response(content)
+    
+    def _parse_response(self, content: str) -> Dict[str, str]:
+        """解析API返回的JSON内容"""
+        try:
+            # 尝试直接解析JSON
+            result = json.loads(content)
+            return {
+                "title": result.get("title", ""),
+                "content": result.get("content", ""),
+                "tags": result.get("tags", ""),
+                "analysis": result.get("analysis", ""),
+                "direction": result.get("direction", "")
+            }
+        except json.JSONDecodeError:
+            # 如果直接解析失败，尝试从文本中提取JSON
+            import re
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            if json_match:
+                try:
+                    result = json.loads(json_match.group())
+                    return {
+                        "title": result.get("title", ""),
+                        "content": result.get("content", ""),
+                        "tags": result.get("tags", ""),
+                        "analysis": result.get("analysis", ""),
+                        "direction": result.get("direction", "")
+                    }
+                except:
+                    pass
+            
+            # 如果无法解析JSON，返回原始内容
+            return {
+                "title": "智能二创标题",
+                "content": content,
+                "tags": "#智能二创 #AI生成",
+                "analysis": "大模型自动生成内容",
+                "direction": "基于AI的智能二创"
+            }
+
+
 load_dotenv()
 
 # 可选：为小红书 API 请求注入 x-s/x-t/x-s-common 签名（需配置 XHS_COOKIES_JSON 含 web_session）
@@ -261,6 +470,14 @@ class XhsAgent:
         fallback_raw = os.getenv("FALLBACK_NOTE_URLS", "").strip()
         self.fallback_note_urls = [u.strip() for u in fallback_raw.split(",") if u.strip()]
         self.logger = RunLogger()
+        # 初始化大模型客户端（如果配置了API密钥）
+        self.llm_client = None
+        if os.getenv("LLM_API_KEY"):
+            try:
+                self.llm_client = LLMClient()
+                self.logger.log("config", "大模型API客户端已初始化", {"api_type": os.getenv("LLM_API_TYPE", "openai")})
+            except Exception as e:
+                self.logger.log("config", "大模型API客户端初始化失败，使用模板二创", {"error": str(e)})
         if _pub_raw != self.publish_page_url:
             self.logger.log(
                 "config",
@@ -560,6 +777,30 @@ class XhsAgent:
         )
 
     def _rewrite(self, note: Note) -> Note:
+        # 如果配置了大模型API，使用大模型进行智能二创
+        if self.llm_client:
+            try:
+                self.logger.log("llm", "使用大模型API进行智能二创", {"note_id": note.note_url[:50]})
+                result = self.llm_client.generate_rewrite(note)
+                note.rewritten_title = result.get("title", "智能二创标题")[:20]
+                note.rewritten_content = result.get("content", "")
+                note.rewritten_tags = result.get("tags", "")
+                note.analysis = result.get("analysis", self._analyze(note))
+                note.direction = result.get("direction", "基于大模型的智能二创")
+                self.logger.log("llm", "大模型二创成功", {"title": note.rewritten_title})
+            except Exception as e:
+                self.logger.log("llm", "大模型二创失败，回退模板二创", {"error": str(e)})
+                # 回退到模板二创
+                return self._template_rewrite(note)
+        else:
+            # 使用模板二创
+            return self._template_rewrite(note)
+        
+        note.rewritten_cover = note.image_urls
+        return note
+    
+    def _template_rewrite(self, note: Note) -> Note:
+        """模板二创（回退方案）"""
         title = "深圳急招带货主播｜团队直招"[:20]
         content = (
             "深圳这边直播团队正在扩编，核心招带货主播，也欢迎愿意学习的新手。\n\n"
