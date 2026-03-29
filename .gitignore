@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+CLAUDE.md
+CONFIG_GUIDE.md
+README_NEW_STRUCTURE.md
 
 # Python
 .venv/
